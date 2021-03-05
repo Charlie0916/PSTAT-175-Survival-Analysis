@@ -1,0 +1,194 @@
+---
+title: "Lab D"
+author: "Mujie Wang"
+date: "11/22/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(survival)
+library(MASS)
+hern1 <- read.table("/Users/wangmujie/Desktop/hern.txt",header = TRUE)
+retire <- read.table("/Users/wangmujie/Desktop/retire.txt", header = TRUE)
+```
+
+
+1(a)
+```{r}
+hern1.surv <- Surv(hern1$Time, hern1$Status)
+hern1.pr <- coxph(hern1.surv ~ hern1$Prison)
+summary(hern1.pr)
+```
+The p-value of prison is 0.263 which is greater than alpha = 0.05,
+there is no significant effect.
+
+1(b)
+```{r}
+hern1.pr.cl <- coxph(hern1.surv ~ Clinic+Prison, data = hern1) 
+hern1.cl <- coxph(hern1.surv ~ Clinic, data = hern1) 
+lrt.prison <- 2*(hern1.pr.cl$loglik[2]-hern1.cl$loglik[2]) 
+pchisq(lrt.prison, df= 1, lower.tail = FALSE)
+```
+Since the p-value is 0.09493 which is gereater than a = 0.05, which means that the prison
+time is not a significant given the clinic is included in the model.
+
+
+1(c)
+```{r}
+hern1.fit.cl <- survfit(hern1.surv ~ Clinic, data = hern1)
+
+plot(hern1.fit.cl,fun="cloglog", main="Log-log plot of Heroin Addicts from Two Clinics",
+     xlab = "days in treatment program", ylab = "log(-log S(t))",
+     lwd=2, col=2:1, mark.time=TRUE, mark = 20)
+
+legend("topleft",inset = 0.10,legend=c("Clinic 1", "Clinic2"),
+       pch=15,col=2:1)
+```
+In the plot there two line represent the clinics, and are two crossing point. At the same
+time, the lines are diverged as the time of the treatment program increases.
+
+1(d)
+```{r}
+hern1.pr.stcl <- coxph(hern1.surv ~ Prison+ strata(Clinic), data = hern1)
+summary(hern1.pr.stcl)
+```
+The p-value is 0.045, which is less than a = 0.05. It mean that the prison time have
+effect. In part 1b, we assime that the baseline hazard rate is the same for all clinics,
+but this model we use strata(Clinic), so it make the constant hazard ratio more
+significant with Prison.
+
+
+1(e)
+```{r}
+hern1.pr_stCl <- coxph(hern1.surv ~ Prison*strata(Clinic), data = hern1)
+summary(hern1.pr_stCl)
+
+lrt.prC <- 2*(hern1.pr_stCl$loglik[2]-hern1.pr.stcl$loglik[2]) 
+pchisq(lrt.prC, df=1,lower.tail = FALSE)
+
+anova(hern1.pr_stCl,hern1.pr.stcl)
+```
+This is a test about significant interaction between the prison variable and the clinic
+variable, and the p-value is 0.3966961 which is greater than 0.05, means that they are
+not significant. The interaction term means that the subject the prison time or not and
+which clinic they go to, and see how long they stays in the treatment program for the
+heroin addiction. It can also help use to decide if one variable depended on the other.
+
+
+2(a)
+```{r}
+retire.surv <- Surv(retire$time, retire$death) 
+retire.ge <- coxph(retire.surv ~ gender, data = retire) 
+summary(retire.ge)
+```
+The likelihood ratio statistic is 5.78 and the p-value is 0.016 which is less then 0.05, 
+so that the survival time between 2 genders has a significant different.
+
+2(b)
+```{r}
+retire.a <- coxph(retire.surv ~ ageentry, data = retire)
+retire.g.a <- coxph(retire.surv ~ gender + ageentry, data = retire) 
+anova(retire.a,retire.g.a )
+```
+The p-value is 0.03406 which is less then 0.05, so there is a significant difference 
+in the survival time between different gender (men and women). 
+However, compare to part a, they have a different model fitting. 
+In part a, it did not control the ageentry;
+In part b, it did the age will keep constant after they entered the facility.
+
+2(c)
+```{r}
+retire.g_a <- coxph(retire.surv ~ gender + age + gender*age, data = retire)
+lrt.retire <- 2*(retire.g_a$loglik[2] - retire.ge$loglik[2]) 
+pchisq(lrt.retire, df=1, lower.tail = FALSE)
+
+retire.g_ag <- coxph(retire.surv ~ gender + ageentry + gender*ageentry, data = retire)
+lrt.retire_ag <- 2*(retire.g_ag$loglik[2] - retire.ge$loglik[2]) 
+pchisq(lrt.retire_ag, df=1, lower.tail = FALSE)
+```
+For age: The interaction between age and gender is signifocant or not 
+is showed why using the likelihood ratio test and the interaction is significant 
+because the p-value is 0.0014 which is less than 0.05.
+For ageentry: The interaction between age and gender is signifocant or not 
+is showed why using the likelihood ratio test and the interaction is significant 
+because the p-value is 2.137116e-11 which is less than 0.05.
+
+2(d)
+```{r}
+retire.fit <- survfit(retire.surv ~ gender, data = retire) 
+plot(retire.fit,fun="cloglog", main="Senior Care Facility for Men and Women",
+     xlab = "months spent at the facility", ylab = "log(-log S(t))", lwd=2,
+     col=2:1, mark.time=TRUE, mark = 20)
+legend("topleft",inset = 0.15,legend=c("Men", "Women"),pch=15,col=2:1)
+```
+The crossing lines show that the proportional hazards assumption is not reasonable for the model. 
+This plot does not satisfy the constant distance between the differentce 
+in the log(-log(s(t))) that we want so have.
+
+2(e)
+We use ageentry as our covariate and not age which is the age of the subject when the event occurred
+because we don???t want to assume that younger individuals have a longer survival time than the older. 
+It is because there factors are affecting the survival time such as illness they have before. 
+We also want to focus on how the time of individual stay in the senior care affect their survivial time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+3(a)
+```{r}
+retire_3 <- retire
+retire_3$time[retire_3$time == 0] = 0.05
+retire_3.split <- survSplit(Surv(time,death)~., episode = "episode",
+                           cut = 48, id = "sub.id", data = retire_3)
+retire_3.split[1:5, ]
+```
+
+3(b)
+```{r}
+retire_3.splitfit <- coxph(Surv(tstart, time, death)~ gender:strata(episode),
+                            data = retire_3.split)
+retire_3.splitfit2 <- coxph(Surv(tstart, time, death)~ ageentry + gender:strata(episode),
+                            data = retire_3.split)
+lrt.retire_3split <- 2*(retire_3.splitfit2$loglik[2]-retire_3.splitfit$loglik[2])
+pchisq(lrt.retire_3split, df=1, lower.tail = FALSE)
+```
+
+```{r}
+summary(retire_3.splitfit2)
+anova(retire_3.splitfit,retire_3.splitfit2)
+```
+3(c)
+```{r}
+ep1 <- subset(retire_3.split, retire_3.split$episode==1) 
+ep2 <- subset(retire_3.split, retire_3.split$episode==2)
+
+ep1.coxph <- coxph(Surv(time,death)~gender, data = ep1) 
+summary(ep1.coxph)
+
+ep2.coxph <- coxph(Surv(time,death)~gender, data = ep2) 
+summary(ep2.coxph)
+```
+The 95% CI of the hazard ratio for men before 48 months cutoff is [0.3092, 0.8785] and after 48 months
+cutoff is [0.4851, 1.181].
+
+3(d)
+I conclude that it is important to consider a change in the effect of gender before and after 4 years in the
+retirement facility, in the 95% CI for the hazard ratio before the 4 years cutoff from part 3c the result is
+[0.3092, 0.8785], so we can conclude what the effect of gender is siginificat to the model. While the after
+4 years cut off, the 95% CI is [0.4851, 1.181], which show that the effect of gender is not significant
+because 1 is inluded. I think that it maybe because people in different gender will have similar treatment
+so there are less different betern the hazard rate and survival time for different gender.
