@@ -1,0 +1,216 @@
+---
+title: "PSTAT175_lab_C"
+author: "Mujie Wang"
+date: "2019/10/28"
+output: pdf_document
+---
+
+Problem 1
+```{r}
+#a)
+library(survival)
+data(kidney)
+kidney.fit <- survfit(Surv(kidney$time,kidney$status) ~ 1)
+plot(kidney.fit, main= "Kaplan-Meier Curves \n for recurrent infection in kidney dialysis patients",
+     xlab = "Survival Time in days",
+     ylab = "Estimated Survival Probability",
+     conf.int = TRUE,col="purple"
+     )
+```
+
+```{r}
+#b)
+kidney.ft<- survdiff(Surv(kidney$time, kidney$status) ~ kidney$sex)
+kidney.ft
+```
+From this test, the p value is 0.004, which means there is statistically 
+significant difference between the different sex groups survival rates.
+
+```{r}
+#c)
+sex <- as.factor(kidney$sex)
+kidney.fit.sex <- survfit(Surv(kidney$time,kidney$status) ~ sex)
+plot(kidney.fit.sex, main= "Kaplan-Meier Curves \n for recurrent infection in kidney dialysis patients",
+     col=c(2,4),lwd=2,conf.int= FALSE, xlab = "Survival Time in days", ylab = "Estimated Survival Probability")
+legend("topright",legend=c("1=Male","2=Female"),
+       col=c("red","blue"),pch=20)
+```
+From the plot, women have longer time until a recurrent infection before first 440 days and after that,
+men have longer time until a recurrent infection. By looking through the graph, it is clear that the women's
+curve are above men'a curve in the beginning, however, at about (440,500)days,women and men's curves meet, 
+and after 500 days, women's curve is below men's curve. Since a higher survival function means a longer time 
+until failure or death, we can say women have better suivival rates and longer time until a recurrent infection
+in the beginning and men have better survival rates after 500 days.
+
+```{r}
+#d)
+kidney.model <- coxph(Surv(kidney$time,kidney$status)~kidney$sex)
+kidney.model
+exp(confint(kidney.model,level=0.95))
+```
+The coefficient for sex is -0.8377 with hazard ratio is 0.4327. The hazard rate for men is 0.433 times 
+of female patients, so that female have longer survival rates than male. The 95% confident interval is
+[0.241936,0.7738447] which include 0.433.
+
+```{r}
+#e)
+male_gp <- kidney[kidney$sex==1,]
+(male_gp.fit <- survfit(Surv(time,status)~1,data=male_gp))
+boxplot.stats(male_gp$time)$out #outerliner
+(male_42 <- kidney[42,])#data in row 42
+male_row <- (which(kidney$sex==1))
+male_row_42 <- male_row[male_row!=42]
+male_gp_42 <- kidney[male_row_42,]
+(male_gp_42.fit <- survfit(Surv(time,status)~1,data=male_gp_42))
+kidney_42 <- kidney[kidney$time!=562,]
+(kidney_42.fit<- coxph(Surv(time,status)~sex, data = kidney_42))
+```
+the observation in row 42 is concerned in the Kaplan???Meier estimate for the male group
+because the observed time is 562 in row 42 which is the outliner, the observation jump for 154 
+to 562 which is larger than other times for man patients.After removed the observation in row 
+42, the hazard ratio will drop to 0.2259 and make the survivor function of the two sexs more similiar.
+
+
+problem 2
+```{r}
+#a)
+library(survival)
+data(mgus)
+mgus1 <- coxph(Surv(futime,death)~ sex, data=mgus)
+mgus1
+```
+Likelihood ratio test H0: Sm(t) = Sf(t); Ha: Sm(t)!= Sf(t),(m=male,f=female)
+The p-value is 0.01224 which is less than 0.05, we reject H0 which means the difference 
+between sexs is significant.
+
+```{r}
+#b)
+#include 'sex'
+cox <- coxph(Surv(futime,death)~age+alb+creat+hgb+mspike+sex, data=mgus)
+cox
+#not include 'sex'
+cox2 <- coxph(Surv(futime,death)~age+alb+creat+hgb+mspike, data=mgus)
+cox2
+#The first one is for null model where there is no covariate. The second one is what we need.
+cox$loglik
+#Compute the Likelihood Ratio
+lrt <- 2*(cox$loglik[2]-cox2$loglik[2])
+lrt
+#Approximate p with the Chi-squared distribution
+pchisq(lrt,df=1,lower.tail=FALSE)
+```
+the p-value is 0.2113388 which is still less than 0.05, 
+so the difference between sexs is significant.
+
+
+c)
+The answers to part (a) and (b) are different because part (b) includes the five 
+covariates age, alb, creat,hgb, and mspike; in part (a), the cox proportional hazard model
+does not keep the covariates constant, these will affect the final result.
+
+```{r}
+#d)
+cox3 <- coxph(Surv(futime,death)~ age+creat+hgb, data=mgus)
+cox3
+cox4 <- coxph(Surv(futime,death)~ age+creat, data=mgus)
+cox4
+```
+After removing the covariates hgb, the p-value decreases, which means the age of patients
+and the creatine level at MGUS diagnosis is significant in Hypothesis testing.
+
+Problem 3
+```{r}
+#a)
+mgus2 <- mgus
+mgus2["time"] <- 0
+mgus2["status"] <- 0
+
+for (i in 1:dim(mgus2)[1]) {
+  if(is.na(mgus2$pctime[i])){
+    mgus2$time[i] <- mgus2$futime[i]
+    mgus2$status[i] <- 0
+    #indicate censord obs 
+  }
+  else{
+    mgus2$time[i] <- mgus2$pctime[i]
+    mgus2$status[i] <- 1
+    #non-censord obs
+  }
+}
+
+mgus3.ft <- survfit(Surv(time, status)~1, data = mgus2)
+par(mar=c(5,5,4,2))
+plot(mgus3.ft, main = "Kaplan Meier estimate of
+     subjects with mgus",
+     xlab = "survival times(days)",
+     ylab = expression(hat(S)(t)),
+     col = "red", mark.time = TRUE, mark = 20, conf.int = FALSE)
+```
+
+```{r}
+#b)
+(mgus3b <- coxph(Surv(time,status)~mspike, data = mgus2))
+```
+The p-value is 0.129 which is greater than 0.05, the size of the monoclonal protein spike at 
+MGUS diagnosis does not have an significant effect.
+
+```{r}
+#c)
+mgus3c_1 <- coxph(Surv(time,status)~sex+age+alb+creat+hgb+mspike, data=mgus2)
+mgus3c_1
+mgus3c_2 <- coxph(Surv(time,status)~sex+age+alb+creat+hgb, data=mgus2)
+mgus3c_2
+#Compute the Likelihood Ratio
+lrt <- 2*(mgus3c_1$loglik[2]-mgus3c_2$loglik[2])
+lrt
+#Approximate p with the Chi-squared distribution
+pchisq(lrt,df=1,lower.tail=FALSE)
+```
+The p-value is 0.09376174 which is greater than 0.05. The size of the monoclonal protein spike 
+at MGUS diagnosis does not have a significant effect on time until a further disease is present.
+
+
+
+
+Problem 4
+```{r}
+#4a
+mgus4a.ft <- survfit(Surv(futime,death)~sex, data = mgus)
+plot(mgus4a.ft, fun = "cloglog",
+  main = "subject with mgus for male and female",
+  xlab = "time in days", ylab = "log(-log S(t)",
+  col=2:1, mark.time=TRUE, mark = 20)
+
+legend("topleft", c("female","male"),pch = 15, col = 2:1)
+```
+There is no evidence that proportional hazards model is not appropriate.
+it is because the lines are likely parallel to each other and no cross appears.
+
+
+```{r}
+#4b
+mgus_female <- mgus[mgus$sex=="female",]
+mgus_female_0 <- coxph(Surv(futime,death)~1, data = mgus_female)
+par(mar=c(5,5,4,2))
+plot(survfit(mgus_female_0),
+     main = "Coxph for female subjects with mgus",
+     xlab = "survival times(days)", ylab = expression(hat(S)(t)),
+     mark.time = T, mark = 20, conf.int = FALSE)
+
+par(mar=c(5,5,4,2))
+mgus_female_fit <- survfit(Surv(futime,death)~1, data = mgus_female)
+plot(mgus_female_fit, main = "Female subjects with mgus",
+     xlab = "survival time(days)", ylab = expression(hat(S)(t)),
+     mark.time = T, mark = 20, conf.int = FALSE)
+```
+the plot seems very similar. that means the cox proportion hazard model gives
+a resonable fit about the data of female.
+
+```{r}
+#4c
+cox.zph(mgus1, global = FALSE)
+```
+The p-value is 0.216 which is greater than 0.05. Therefore, the model is not
+significantly divergent from the proportional hazards model. As a result, we
+are justified in using the proportional hazards assumption in our modeling of 
+the effect of sexs.
