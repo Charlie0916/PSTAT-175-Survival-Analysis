@@ -1,0 +1,65 @@
+---
+title: "Mujie_Wang_Assignment#1"
+author: "Mujie Wang"
+date: "2019/10/7"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+#prob 1
+```{r}
+#1(a) read first column as vet.time
+vet <- read.csv ("/Users/wangmujie/Desktop/vets.txt", header = FALSE, sep = "")
+vet.time <- vet$V1
+
+#1(b) read second column as vet.cns
+vet.cns <- vet$V2
+
+#1(c) load library
+library(survival)
+  #using Surv function, call it vet.surv
+vet.surv <- Surv(vet.time,vet.cns)
+  #print out the result
+print(vet.surv)
+
+#1(d) Calculate the mean vet.time
+mean(vet.time)
+#because it includes censored data, so it is biased
+
+#1(e) Calculate the sum
+sum(vet.cns)
+sum(vet.cns*vet.time)
+#sum(vet.time) represent the total number of occurance
+#sum(vet.cns*vet.time) represent the total time of every event to occur
+#when multiply by the result will only be the sum of every event
+
+#1(f) run the function
+mean(vet.surv)
+#this is mean of data of occurance, without any censored data, so it is unbiased
+```
+
+#prob 2
+```{r}
+#2(a) read data and construct object
+
+retire <- read.table("/Users/wangmujie/Desktop/retire.txt", header = TRUE, skip = 2)
+ret.surv <- Surv(retire$time,retire$death)
+
+#2(b) function survfit
+ret.fit <- survfit(ret.surv ~ 1)
+
+#2(c) plot the result
+plot(ret.fit,
+     main = "Kaplan-Meier Curves \n for patients lived at a retirement home",
+     xlab = "Times(Months)",
+     ylab = "S(t)",
+     col = "blue")
+
+#2(d) generate a summary of the survival function
+summary(ret.fit)
+#in the past 50 months, the probability of sample surviving
+#is between 80.2% and 87.5%
+```
+
